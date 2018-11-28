@@ -221,27 +221,52 @@ void Referenced::CalculateSignature(const Attributes &attributes,
         hasher.Update(value.bytes_value());
         break;
       case Attributes_AttributeValue::kInt64Value: {
+        #if __BYTE_ORDER == __LITTLE_ENDIAN
         auto data = value.int64_value();
-        hasher.Update(&data, sizeof(data));
+	#elif __BYTE_ORDER == __BIG_ENDIAN
+        auto data = le64toh(value.int64_value());
+	#endif
+	hasher.Update(&data, sizeof(data));
       } break;
       case Attributes_AttributeValue::kDoubleValue: {
+        #if __BYTE_ORDER == __LITTLE_ENDIAN
         auto data = value.double_value();
         hasher.Update(&data, sizeof(data));
+	#elif __BYTE_ORDER == __BIG_ENDIAN
+        auto data = value.double_value();
+        char val[sizeof(data)];
+        memcpy(val, &data, sizeof(data));
+        double result;
+        char *dest = (char *)&result;
+        for(int i=0; i<(int)sizeof(double); i++)
+        {
+                dest[i] = val[sizeof(double)-i-1];
+        }
+        hasher.Update(&result, sizeof(result));
+	#endif
       } break;
       case Attributes_AttributeValue::kBoolValue: {
         auto data = value.bool_value();
         hasher.Update(&data, sizeof(data));
       } break;
       case Attributes_AttributeValue::kTimestampValue: {
+        #if __BYTE_ORDER == __LITTLE_ENDIAN
         auto seconds = value.timestamp_value().seconds();
-        auto nanos = value.timestamp_value().nanos();
+	#elif __BYTE_ORDER == __BIG_ENDIAN
+        auto seconds = le64toh(value.timestamp_value().seconds());
+	#endif
+	auto nanos = value.timestamp_value().nanos();
         hasher.Update(&seconds, sizeof(seconds));
         hasher.Update(kDelimiter, kDelimiterLength);
         hasher.Update(&nanos, sizeof(nanos));
       } break;
       case Attributes_AttributeValue::kDurationValue: {
+        #if __BYTE_ORDER == __LITTLE_ENDIAN
         auto seconds = value.duration_value().seconds();
-        auto nanos = value.duration_value().nanos();
+	#elif __BYTE_ORDER == __BIG_ENDIAN
+        auto seconds = le64toh(value.duration_value().seconds());
+	#endif
+	auto nanos = value.duration_value().nanos();
         hasher.Update(&seconds, sizeof(seconds));
         hasher.Update(kDelimiter, kDelimiterLength);
         hasher.Update(&nanos, sizeof(nanos));
